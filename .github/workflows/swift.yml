@@ -1,4 +1,4 @@
-name: Test MoproFFI
+name: Test OpenACSwift
 
 on:
     push:
@@ -35,4 +35,4 @@ jobs:
               run: |
                   xcodebuild test \
                     -scheme OpenACSwift \
-                    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
+                    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
