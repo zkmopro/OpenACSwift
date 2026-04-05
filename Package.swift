@@ -5,6 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "OpenACSwift",
+    platforms: [
+        .iOS(.v16),
+    ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
@@ -19,16 +22,25 @@ let package = Package(
             name: "OpenACSwift",
             dependencies: [
                 .target(name: "OpenACSwiftBindings")
+            ],
+            path: "Sources/",
+            linkerSettings: [
+                .linkedLibrary("c++"),
             ]
         ),
         .binaryTarget(
             name: "OpenACSwiftBindings",
-            url: "https://github.com/zkmopro/zkID/releases/download/latest/MoproiOSBindings.zip",
-            checksum: "3e703de17f4e368b63d1966261dad421e9f32e654a9facad086770f192f89d28"
+            url: "https://github.com/zkmopro/zkID/releases/download/latest/MoproBindings.xcframework.zip",
+            checksum: "cf0a907259ad8509ac0b3ac27becd82fb2a4b92d67a6fa9480636f2884cf5e7d"
         ),
         .testTarget(
             name: "OpenACSwiftTests",
-            dependencies: ["OpenACSwift"]
+            dependencies: [
+                "OpenACSwift",
+            ],
+            resources: [
+                .copy("TestVectors"),
+            ]
         ),
     ],
     swiftLanguageModes: [.v6]

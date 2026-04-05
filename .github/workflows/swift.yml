@@ -1,0 +1,38 @@
+name: Test MoproFFI
+
+on:
+    push:
+        branches:
+            - main
+
+    pull_request:
+        branches:
+            - main
+        types:
+            - ready_for_review
+
+    # Option to manually trigger the workflow
+    workflow_dispatch:
+
+jobs:
+    build-and-test:
+        runs-on: macos-latest
+
+        steps:
+            - name: Checkout OpenACSwift
+              uses: actions/checkout@v5
+
+            - name: Set up Xcode environment
+              run: |
+                  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+                  sudo xcodebuild -license accept
+            
+            - name: Download Test Vectors
+              run: |
+                  ./Scripts/download-test-vectors.sh
+
+            - name: Run Package Tests
+              run: |
+                  xcodebuild test \
+                    -scheme OpenACSwift \
+                    -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
