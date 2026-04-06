@@ -1,0 +1,4 @@
+module openac_mobile_appFFI {
+    header "openac_mobile_appFFI.h"
+    export *
+}

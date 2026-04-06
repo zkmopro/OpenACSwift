@@ -21,12 +21,23 @@ let package = Package(
         .target(
             name: "OpenACSwift",
             dependencies: [
-                .target(name: "OpenACSwiftBindings")
+                .target(name: "OpenACSwiftBindings"),
+                .target(name: "COpenACFFI"),
             ],
             path: "Sources/",
+            exclude: ["COpenACFFI"],
             linkerSettings: [
                 .linkedLibrary("c++"),
             ]
+        ),
+        // COpenACFFI exposes openac_mobile_appFFI as a real SPM Clang module.
+        // Xcode 26+ does not register module maps from binary XCFrameworks
+        // containing static libraries, so #if canImport(openac_mobile_appFFI)
+        // in mopro.swift would evaluate to false without this shim.
+        .target(
+            name: "COpenACFFI",
+            path: "Sources/COpenACFFI",
+            publicHeadersPath: "include"
         ),
         .binaryTarget(
             name: "OpenACSwiftBindings",
