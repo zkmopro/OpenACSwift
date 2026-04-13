@@ -21,7 +21,7 @@ jobs:
 
         steps:
             - name: Checkout OpenACSwift
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Run update-bindings.sh
               run: |
