@@ -672,17 +672,17 @@ public enum ZkProofError {
 
     
     
-    case FileNotFound(message: String
+    case FileNotFound(msg: String
     )
-    case ProofGenerationFailed(message: String
+    case ProofGenerationFailed(msg: String
     )
-    case VerificationFailed(message: String
+    case VerificationFailed(msg: String
     )
-    case InvalidInput(message: String
+    case InvalidInput(msg: String
     )
-    case SetupRequired(message: String
+    case SetupRequired(msg: String
     )
-    case IoError(message: String
+    case IoError(msg: String
     )
 }
 
@@ -701,22 +701,22 @@ public struct FfiConverterTypeZkProofError: FfiConverterRustBuffer {
 
         
         case 1: return .FileNotFound(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 2: return .ProofGenerationFailed(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 3: return .VerificationFailed(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 4: return .InvalidInput(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 5: return .SetupRequired(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 6: return .IoError(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -730,34 +730,34 @@ public struct FfiConverterTypeZkProofError: FfiConverterRustBuffer {
 
         
         
-        case let .FileNotFound(message):
+        case let .FileNotFound(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .ProofGenerationFailed(message):
+        case let .ProofGenerationFailed(msg):
             writeInt(&buf, Int32(2))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .VerificationFailed(message):
+        case let .VerificationFailed(msg):
             writeInt(&buf, Int32(3))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .InvalidInput(message):
+        case let .InvalidInput(msg):
             writeInt(&buf, Int32(4))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .SetupRequired(message):
+        case let .SetupRequired(msg):
             writeInt(&buf, Int32(5))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .IoError(message):
+        case let .IoError(msg):
             writeInt(&buf, Int32(6))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         }
     }
@@ -814,6 +814,22 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 /**
+ * Generate circuit input from a FIDO FidoSignResponse (sha256rsa4096)
+ */
+public func generateInputFido(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtServer: String?, issuerId: String, outputPath: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_generate_input_fido(
+        FfiConverterString.lower(certb64),
+        FfiConverterString.lower(signedResponse),
+        FfiConverterString.lower(tbs),
+        FfiConverterString.lower(issuerCertPath),
+        FfiConverterOptionString.lower(smtServer),
+        FfiConverterString.lower(issuerId),
+        FfiConverterString.lower(outputPath),$0
+    )
+})
+}
+/**
  * Test function for basic UniFFI integration
  */
 public func moproHelloWorld() -> String  {
@@ -823,48 +839,44 @@ public func moproHelloWorld() -> String  {
 })
 }
 /**
- * Generate RS256 circuit proof
- * Runs proving using existing keys
+ * Generate sha256rsa4096 circuit proof (FIDO)
  */
-public func prove(documentsPath: String, inputPath: String?)throws  -> ProofResult  {
+public func proveFido(documentsPath: String, inputPath: String?)throws  -> ProofResult  {
     return try  FfiConverterTypeProofResult_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_prove(
+    uniffi_openac_mobile_app_fn_func_prove_fido(
         FfiConverterString.lower(documentsPath),
         FfiConverterOptionString.lower(inputPath),$0
     )
 })
 }
 /**
- * Run complete benchmark pipeline for RS256 circuit
- * Executes setup, prove, and verify with timing and size metrics
+ * Run complete benchmark pipeline for sha256rsa4096 circuit (FIDO)
  */
-public func runCompleteBenchmark(documentsPath: String, inputPath: String?)throws  -> BenchmarkResults  {
+public func runCompleteBenchmarkFido(documentsPath: String, inputPath: String?)throws  -> BenchmarkResults  {
     return try  FfiConverterTypeBenchmarkResults_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_run_complete_benchmark(
+    uniffi_openac_mobile_app_fn_func_run_complete_benchmark_fido(
         FfiConverterString.lower(documentsPath),
         FfiConverterOptionString.lower(inputPath),$0
     )
 })
 }
 /**
- * Setup RS256 circuit keys
- * Generates proving and verifying keys for the rs256 circuit
+ * Setup sha256rsa4096 circuit keys (FIDO)
  */
-public func setupKeys(documentsPath: String, inputPath: String?)throws  -> String  {
+public func setupKeysFido(documentsPath: String, inputPath: String?)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_setup_keys(
+    uniffi_openac_mobile_app_fn_func_setup_keys_fido(
         FfiConverterString.lower(documentsPath),
         FfiConverterOptionString.lower(inputPath),$0
     )
 })
 }
 /**
- * Verify RS256 circuit proof
- * Verifies the proof using the verifying key
+ * Verify sha256rsa4096 circuit proof (FIDO)
  */
-public func verify(documentsPath: String)throws  -> Bool  {
+public func verifyFido(documentsPath: String)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_verify(
+    uniffi_openac_mobile_app_fn_func_verify_fido(
         FfiConverterString.lower(documentsPath),$0
     )
 })
@@ -885,19 +897,22 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_openac_mobile_app_checksum_func_generate_input_fido() != 45191) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_openac_mobile_app_checksum_func_mopro_hello_world() != 46672) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_prove() != 6353) {
+    if (uniffi_openac_mobile_app_checksum_func_prove_fido() != 51185) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 21567) {
+    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark_fido() != 7072) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 1772) {
+    if (uniffi_openac_mobile_app_checksum_func_setup_keys_fido() != 41495) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify() != 17053) {
+    if (uniffi_openac_mobile_app_checksum_func_verify_fido() != 39808) {
         return InitializationResult.apiChecksumMismatch
     }
 

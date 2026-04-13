@@ -8,3 +8,4 @@ DerivedData/
 .netrc
 
 *.r1cs
+fido_response_sign.json
