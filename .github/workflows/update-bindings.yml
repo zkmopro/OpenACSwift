@@ -1,0 +1,51 @@
+name: Update Bindings
+
+on:
+    # Manual trigger
+    workflow_dispatch:
+
+    repository_dispatch:
+        types: [zkid-release]
+
+    schedule:
+        - cron: '0 2 * * *'   # 02:00 UTC every day
+
+
+jobs:
+    update-bindings:
+        runs-on: macos-latest
+
+        permissions:
+            contents: write
+            pull-requests: write
+
+        steps:
+            - name: Checkout OpenACSwift
+              uses: actions/checkout@v4
+
+            - name: Run update-bindings.sh
+              run: |
+                  chmod +x Scripts/update-bindings.sh
+                  ./Scripts/update-bindings.sh
+
+            - name: Check for changes
+              id: changes
+              run: |
+                  git diff --quiet || echo "changed=true" >> "$GITHUB_OUTPUT"
+                  echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
+            - name: Open pull request
+              if: steps.changes.outputs.changed == 'true'
+              uses: peter-evans/create-pull-request@v7
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  branch: update-bindings/${{ steps.changes.outputs.date }}
+                  commit-message: "chore: update bindings to latest zkID release"
+                  title: "chore: update bindings to latest zkID release"
+                  body: |
+                      Changes:
+                      - `Package.swift` — updated binary target URL and checksum
+                      - `Sources/COpenACFFI/include/openac_mobile_appFFI.h` — synced from xcframework
+                      - `Sources/mopro.swift` — downloaded latest generated bindings
+                  labels: automated
+                  delete-branch: true
