@@ -31,6 +31,8 @@ MOPRO_SWIFT_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/mopro.sw
 # ── Clear SPM cache to force a fresh fetch ───────────────────────────────────
 echo "==> Clearing SPM cache"
 rm -rf ~/Library/Caches/org.swift.swiftpm
+rm -rf .build
+rm -rf .swiftpm
 echo "    done."
 
 # ── Download the xcframework zip ──────────────────────────────────────────────
