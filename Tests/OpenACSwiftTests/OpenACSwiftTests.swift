@@ -15,6 +15,14 @@ private enum TestSupport {
     testBundle.path(forResource: "input", ofType: "json", inDirectory: "TestVectors")
   }
 
+  static var bundledProvingKeyPath: String? {
+    testBundle.path(forResource: "rs256_4096_proving", ofType: "key", inDirectory: "TestVectors")
+  }
+
+  static var bundledVerifyingKeyPath: String? {
+    testBundle.path(forResource: "rs256_4096_verifying", ofType: "key", inDirectory: "TestVectors")
+  }
+
   static var bundledResponseJSONPath: String? {
     testBundle.path(forResource: "response_sign", ofType: "json", inDirectory: "TestVectors")
   }
@@ -80,7 +88,6 @@ struct OpenACSwiftTests {
       "TestVectors/input.json must be copied into the test bundle (see Package.swift resources)."
     )
 
-    _ = try setupKeysFido(documentsPath: TestSupport.documentsPath, inputPath: inputPath)
     _ = try proveFido(documentsPath: TestSupport.documentsPath, inputPath: inputPath)
 
     let valid = try verifyFido(documentsPath: TestSupport.documentsPath)
