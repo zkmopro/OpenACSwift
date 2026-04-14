@@ -42,7 +42,7 @@ let package = Package(
         .binaryTarget(
             name: "OpenACSwiftBindings",
             url: "https://github.com/zkmopro/zkID/releases/download/latest/MoproBindings.xcframework.zip",
-            checksum: "cdef55b02955dee4b7ed15fd3c952e93f10a0daba42ada0891e5a1155a992178"
+            checksum: "ba204be468b76cd993b50a3f46f3e947ca5acbe7dd8346a04ad6df9bfb2d051d"
         ),
         .testTarget(
             name: "OpenACSwiftTests",
