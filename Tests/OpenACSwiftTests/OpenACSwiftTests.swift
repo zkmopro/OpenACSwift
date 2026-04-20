@@ -20,33 +20,46 @@ private enum TestSupport {
   }
 
   static var bundledCertChainRs4096InputJSONPath: String? {
-    testBundle.path(forResource: "cert_chain_rs4096_input", ofType: "json", inDirectory: "TestVectors")
+    testBundle.path(
+      forResource: "cert_chain_rs4096_input", ofType: "json", inDirectory: "TestVectors")
   }
 
   static var bundledDeviceSigRs2048InputJSONPath: String? {
-    testBundle.path(forResource: "device_sig_rs2048_input", ofType: "json", inDirectory: "TestVectors")
+    testBundle.path(
+      forResource: "device_sig_rs2048_input", ofType: "json", inDirectory: "TestVectors")
   }
 
   static var bundledCertChainRs4096ProvingKeyPath: String? {
-    testBundle.path(forResource: "cert_chain_rs4096_proving", ofType: "key", inDirectory: "TestVectors/keys")
+    testBundle.path(
+      forResource: "cert_chain_rs4096_proving", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledDeviceSigRs2048ProvingKeyPath: String? {
-    testBundle.path(forResource: "device_sig_rs2048_proving", ofType: "key", inDirectory: "TestVectors/keys")
+    testBundle.path(
+      forResource: "device_sig_rs2048_proving", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledCertChainRs4096VerifyingKeyPath: String? {
-    testBundle.path(forResource: "cert_chain_rs4096_verifying", ofType: "key", inDirectory: "TestVectors/keys")
+    testBundle.path(
+      forResource: "cert_chain_rs4096_verifying", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledDeviceSigRs2048VerifyingKeyPath: String? {
-    testBundle.path(forResource: "device_sig_rs2048_verifying", ofType: "key", inDirectory: "TestVectors/keys")
+    testBundle.path(
+      forResource: "device_sig_rs2048_verifying", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledMOICA_G3CertPath: String? {
     testBundle.path(forResource: "MOICA-G3", ofType: "cer", inDirectory: "TestVectors")
   }
 
+  // static var bundledFidoResponseJSONPath: String? {
+  //   testBundle.path(forResource: "fido_response_sign", ofType: "json", inDirectory: "TestVectors")
+  // }
+
+  // static var bundledSMTSnapshotJSONPath: String? {
+  //   testBundle.path(forResource: "g3-tree-snapshot.json", ofType: "gz", inDirectory: "TestVectors")
+  // }
 }
 
 // Serialized so tests don't race on the shared documentsPath (keys, proof files written there).
@@ -170,24 +183,39 @@ struct OpenACSwiftTests {
   //     "TestVectors/pkcs11info_withcert.json must be copied into the test bundle (see Package.swift resources)."
   //   )
 
-  //   let outputPath = (NSTemporaryDirectory() as NSString)
-  //     .appendingPathComponent("openac-input-\(UUID().uuidString).json")
-  //   let smtServer: String? = nil
-  //   let issuerId = "g2"
+  //   let smtSnapshotPath = try #require(
+  //     TestSupport.bundledSMTSnapshotJSONPath,
+  //     "TestVectors/g3-tree-snapshot.json must be copied into the test bundle (see Package.swift resources)."
+  //   )
 
-  //   let _ = try generateInputFido(
+  //   let _ = try generateCertChainRs4096Input(
   //     certb64: certb64,
   //     signedResponse: signedResponse,
   //     tbs: tbs,
   //     issuerCertPath: issuerCertPath,
-  //     smtServer: smtServer,
-  //     issuerId: issuerId,
-  //     outputPath: outputPath
+  //     smtSnapshotPath: smtSnapshotPath,
+  //     outputDir: TestSupport.documentsPath
   //   )
 
   //   #expect(
-  //     FileManager.default.fileExists(atPath: outputPath),
-  //     "generateInputFido should write a circuit input JSON to outputPath."
+  //     FileManager.default.fileExists(
+  //       atPath: TestSupport.documentsPath + "/cert_chain_rs4096_input.json"),
+  //     "generateCertChainRs4096Input should write a circuit input JSON to TestSupport.documentsPath/cert_chain_rs4096_input.json."
   //   )
+
+  //   _ = try proveCertChainRs4096(documentsPath: TestSupport.documentsPath)
+
+  //   let validCert = try verifyCertChainRs4096(documentsPath: TestSupport.documentsPath)
+
+  //   #expect(validCert, "Verification should succeed after a valid proveCertChainRs4096 call.")
+  //   _ = try proveDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+
+  //   let validDev = try verifyDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+
+  //   #expect(validDev, "Verification should succeed after a valid proveDeviceSigRs2048 call.")
+
+  //   let validLink = try linkVerify(documentsPath: TestSupport.documentsPath)
+
+  //   #expect(validLink, "Verification should succeed after a valid linkVerify call.")
   // }
 }

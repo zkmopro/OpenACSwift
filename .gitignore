@@ -10,3 +10,4 @@ DerivedData/
 *.r1cs
 *.key
 fido_response_sign.json
+g3-tree-snapshot.json.gz

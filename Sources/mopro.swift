@@ -400,6 +400,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
+    typealias FfiType = UInt32
+    typealias SwiftType = UInt32
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
@@ -475,6 +491,24 @@ fileprivate struct FfiConverterString: FfiConverter {
         let len = Int32(value.utf8.count)
         writeInt(&buf, len)
         writeBytes(&buf, value.utf8)
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
     }
 }
 
@@ -667,6 +701,239 @@ public func FfiConverterTypeProofResult_lower(_ value: ProofResult) -> RustBuffe
 
 
 /**
+ * Circom-ready SMT inputs — all values as decimal strings, siblings padded to depth.
+ * Mirrors `ecdsa_spartan2::smt_client::SmtCircuitInputs`.
+ */
+public struct SmtCircuitInputs {
+    public var smtRoot: String
+    public var serialNumber: String
+    public var smtSiblings: [String]
+    public var smtOldKey: String
+    public var smtOldValue: String
+    public var smtIsOld0: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(smtRoot: String, serialNumber: String, smtSiblings: [String], smtOldKey: String, smtOldValue: String, smtIsOld0: String) {
+        self.smtRoot = smtRoot
+        self.serialNumber = serialNumber
+        self.smtSiblings = smtSiblings
+        self.smtOldKey = smtOldKey
+        self.smtOldValue = smtOldValue
+        self.smtIsOld0 = smtIsOld0
+    }
+}
+
+#if compiler(>=6)
+extension SmtCircuitInputs: Sendable {}
+#endif
+
+
+extension SmtCircuitInputs: Equatable, Hashable {
+    public static func ==(lhs: SmtCircuitInputs, rhs: SmtCircuitInputs) -> Bool {
+        if lhs.smtRoot != rhs.smtRoot {
+            return false
+        }
+        if lhs.serialNumber != rhs.serialNumber {
+            return false
+        }
+        if lhs.smtSiblings != rhs.smtSiblings {
+            return false
+        }
+        if lhs.smtOldKey != rhs.smtOldKey {
+            return false
+        }
+        if lhs.smtOldValue != rhs.smtOldValue {
+            return false
+        }
+        if lhs.smtIsOld0 != rhs.smtIsOld0 {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(smtRoot)
+        hasher.combine(serialNumber)
+        hasher.combine(smtSiblings)
+        hasher.combine(smtOldKey)
+        hasher.combine(smtOldValue)
+        hasher.combine(smtIsOld0)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSmtCircuitInputs: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SmtCircuitInputs {
+        return
+            try SmtCircuitInputs(
+                smtRoot: FfiConverterString.read(from: &buf), 
+                serialNumber: FfiConverterString.read(from: &buf), 
+                smtSiblings: FfiConverterSequenceString.read(from: &buf), 
+                smtOldKey: FfiConverterString.read(from: &buf), 
+                smtOldValue: FfiConverterString.read(from: &buf), 
+                smtIsOld0: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SmtCircuitInputs, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.smtRoot, into: &buf)
+        FfiConverterString.write(value.serialNumber, into: &buf)
+        FfiConverterSequenceString.write(value.smtSiblings, into: &buf)
+        FfiConverterString.write(value.smtOldKey, into: &buf)
+        FfiConverterString.write(value.smtOldValue, into: &buf)
+        FfiConverterString.write(value.smtIsOld0, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSmtCircuitInputs_lift(_ buf: RustBuffer) throws -> SmtCircuitInputs {
+    return try FfiConverterTypeSmtCircuitInputs.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSmtCircuitInputs_lower(_ value: SmtCircuitInputs) -> RustBuffer {
+    return FfiConverterTypeSmtCircuitInputs.lower(value)
+}
+
+
+/**
+ * SMT proof from the moica-revocation-smt server, all values as hex strings.
+ */
+public struct SmtProof {
+    /**
+     * Tree root at proof time (hex string).
+     */
+    public var root: String
+    /**
+     * Sibling hashes from leaf level upward (hex strings).
+     */
+    public var siblings: [String]
+    /**
+     * [key] for non-membership; [key, value, marker] for membership.
+     */
+    public var entry: [String]
+    /**
+     * Present for non-membership proofs when a conflicting leaf exists.
+     */
+    public var matchingEntry: [String]?
+    /**
+     * True if the key is claimed to exist in the tree.
+     */
+    public var membership: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Tree root at proof time (hex string).
+         */root: String, 
+        /**
+         * Sibling hashes from leaf level upward (hex strings).
+         */siblings: [String], 
+        /**
+         * [key] for non-membership; [key, value, marker] for membership.
+         */entry: [String], 
+        /**
+         * Present for non-membership proofs when a conflicting leaf exists.
+         */matchingEntry: [String]?, 
+        /**
+         * True if the key is claimed to exist in the tree.
+         */membership: Bool) {
+        self.root = root
+        self.siblings = siblings
+        self.entry = entry
+        self.matchingEntry = matchingEntry
+        self.membership = membership
+    }
+}
+
+#if compiler(>=6)
+extension SmtProof: Sendable {}
+#endif
+
+
+extension SmtProof: Equatable, Hashable {
+    public static func ==(lhs: SmtProof, rhs: SmtProof) -> Bool {
+        if lhs.root != rhs.root {
+            return false
+        }
+        if lhs.siblings != rhs.siblings {
+            return false
+        }
+        if lhs.entry != rhs.entry {
+            return false
+        }
+        if lhs.matchingEntry != rhs.matchingEntry {
+            return false
+        }
+        if lhs.membership != rhs.membership {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(root)
+        hasher.combine(siblings)
+        hasher.combine(entry)
+        hasher.combine(matchingEntry)
+        hasher.combine(membership)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSmtProof: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SmtProof {
+        return
+            try SmtProof(
+                root: FfiConverterString.read(from: &buf), 
+                siblings: FfiConverterSequenceString.read(from: &buf), 
+                entry: FfiConverterSequenceString.read(from: &buf), 
+                matchingEntry: FfiConverterOptionSequenceString.read(from: &buf), 
+                membership: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SmtProof, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.root, into: &buf)
+        FfiConverterSequenceString.write(value.siblings, into: &buf)
+        FfiConverterSequenceString.write(value.entry, into: &buf)
+        FfiConverterOptionSequenceString.write(value.matchingEntry, into: &buf)
+        FfiConverterBool.write(value.membership, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSmtProof_lift(_ buf: RustBuffer) throws -> SmtProof {
+    return try FfiConverterTypeSmtProof.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSmtProof_lower(_ value: SmtProof) -> RustBuffer {
+    return FfiConverterTypeSmtProof.lower(value)
+}
+
+
+/**
  * Errors that can occur during ZK proof operations
  */
 public enum ZkProofError {
@@ -814,6 +1081,102 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
         }
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+/**
+ * Parse a @zk-kit/smt v1.0.2-compatible snapshot JSON and return its root.
+ *
+ * The returned root can be used as `expected_root` in subsequent calls to
+ * `verify_smt_proof`.
+ */
+public func buildSmtFromSnapshot(snapshotJson: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_openac_mobile_app_fn_func_build_smt_from_snapshot(
+        FfiConverterString.lower(snapshotJson),$0
+    )
+})
+}
+/**
+ * Load a snapshot and generate a proof for `key_hex` in one call (JSON input).
+ *
+ * # Arguments
+ * * `snapshot_json` – decompressed snapshot JSON string
+ * * `key_hex`       – certificate serial number as a hex string (with or without `0x`)
+ *
+ * Returns the proof ready to pass straight into `verify_smt_proof`.
+ */
+public func createSmtProof(snapshotJson: String, keyHex: String)throws  -> SmtProof  {
+    return try  FfiConverterTypeSmtProof_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_create_smt_proof(
+        FfiConverterString.lower(snapshotJson),
+        FfiConverterString.lower(keyHex),$0
+    )
+})
+}
+/**
+ * Load a snapshot and generate a proof for `key_hex` in one call (gzip input).
+ *
+ * # Arguments
+ * * `gz_data` – raw bytes of the `.json.gz` snapshot file
+ * * `key_hex` – certificate serial number as a hex string (with or without `0x`)
+ *
+ * Returns the proof ready to pass straight into `verify_smt_proof`.
+ */
+public func createSmtProofFromGz(gzData: Data, keyHex: String)throws  -> SmtProof  {
+    return try  FfiConverterTypeSmtProof_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_create_smt_proof_from_gz(
+        FfiConverterData.lower(gzData),
+        FfiConverterString.lower(keyHex),$0
+    )
+})
+}
 /**
  * Generate split circuit inputs for both cert_chain_rs4096 and device_sig_rs2048.
  *
@@ -822,16 +1185,19 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
  * - `device_sig_rs2048_input.json`
  *
  * These are the input files expected by `prove` via `PathConfig::mobile`.
+ *
+ * `smt_proof` should be the non-membership proof for the certificate's serial
+ * number, produced by `create_smt_proof_from_gz` / `create_smt_proof`.
+ * Pass `None` to omit SMT revocation checking.
  */
-public func generateCertChainRs4096Input(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtServer: String?, issuerId: String, outputDir: String)throws  -> String  {
+public func generateCertChainRs4096Input(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtSnapshotPath: String?, outputDir: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
     uniffi_openac_mobile_app_fn_func_generate_cert_chain_rs4096_input(
         FfiConverterString.lower(certb64),
         FfiConverterString.lower(signedResponse),
         FfiConverterString.lower(tbs),
         FfiConverterString.lower(issuerCertPath),
-        FfiConverterOptionString.lower(smtServer),
-        FfiConverterString.lower(issuerId),
+        FfiConverterOptionString.lower(smtSnapshotPath),
         FfiConverterString.lower(outputDir),$0
     )
 })
@@ -922,6 +1288,21 @@ public func setupKeys(documentsPath: String)throws  -> String  {
 })
 }
 /**
+ * Convert an `SmtProof` (hex strings) into the `SmtCircuitInputs` that the
+ * Circom cert-chain circuit expects (decimal strings, siblings padded to `depth`).
+ *
+ * This is the offline equivalent of `ecdsa_spartan2::smt_client::fetch_smt_proof`:
+ * instead of hitting the server you supply the proof generated from the local snapshot.
+ */
+public func smtProofToCircuitInputs(proof: SmtProof, depth: UInt32)throws  -> SmtCircuitInputs  {
+    return try  FfiConverterTypeSmtCircuitInputs_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_smt_proof_to_circuit_inputs(
+        FfiConverterTypeSmtProof_lower(proof),
+        FfiConverterUInt32.lower(depth),$0
+    )
+})
+}
+/**
  * Verify proofs for cert_chain_rs4096 circuit.
  */
 public func verifyCertChainRs4096(documentsPath: String)throws  -> Bool  {
@@ -941,6 +1322,21 @@ public func verifyDeviceSigRs2048(documentsPath: String)throws  -> Bool  {
     )
 })
 }
+/**
+ * Verify an SMT non-membership (or membership) proof against a trusted root.
+ *
+ * Recomputes the Merkle root from `proof.entry` + `proof.siblings` using
+ * Poseidon-P256, then compares against `expected_root`.  Returns `true` iff
+ * the proof is valid.
+ */
+public func verifySmtProof(proof: SmtProof, expectedRoot: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_openac_mobile_app_fn_func_verify_smt_proof(
+        FfiConverterTypeSmtProof_lower(proof),
+        FfiConverterString.lower(expectedRoot),$0
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -957,7 +1353,16 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 45535) {
+    if (uniffi_openac_mobile_app_checksum_func_build_smt_from_snapshot() != 37072) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_create_smt_proof() != 25623) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_create_smt_proof_from_gz() != 33213) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 14364) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_link_verify() != 4694) {
@@ -978,10 +1383,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 1011) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_openac_mobile_app_checksum_func_smt_proof_to_circuit_inputs() != 957) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_openac_mobile_app_checksum_func_verify_cert_chain_rs4096() != 13705) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_verify_device_sig_rs2048() != 39939) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_verify_smt_proof() != 34213) {
         return InitializationResult.apiChecksumMismatch
     }
 

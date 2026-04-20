@@ -3,35 +3,50 @@ set -euo pipefail
 
 DEST_DIR="Tests/OpenACSwiftTests/TestVectors"
 BASE_URL="https://github.com/zkmopro/zkID/releases/download/latest"
+SMT_BASE_URL="https://github.com/moven0831/moica-revocation-smt/releases/download/snapshot-latest"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 download_and_gunzip() {
-    local name="$1"   # filename with .gz extension
+    local url="$1"   # URL to download
     local folder="${2:-}" # subfolder under DEST_DIR, or empty
-    local decompressed="${name%.gz}"
-    local dest_dir="$DEST_DIR"
-    if [ -n "$folder" ]; then
-        dest_dir="$DEST_DIR/$folder"
-    fi
-    local dest="$dest_dir/$decompressed"
+    local decompressed="${url##*/}"
+    decompressed="${decompressed%.gz}"
+    local dest="$DEST_DIR/${folder:+$folder/}$decompressed"
 
     if [ -f "$dest" ]; then
         echo "Already exists: $dest"
         return
+    else
+        mkdir -p "$(dirname "$dest")"
+        echo "Downloading $url -> $dest"
+        curl -fL "$url" -o "$TMP/$decompressed"
+        gunzip -c "$TMP/$decompressed" > "$dest"
+        echo "Saved to $dest"
     fi
-
-    mkdir -p "$dest_dir"
-    echo "Downloading $name..."
-    curl -fL "$BASE_URL/$name" -o "$TMP/$name"
-    gunzip -c "$TMP/$name" > "$dest"
-    echo "Saved to $dest"
 }
 
-download_and_gunzip "cert_chain_rs4096.r1cs.gz"
-download_and_gunzip "cert_chain_rs4096_proving.key.gz" "keys"
-download_and_gunzip "cert_chain_rs4096_verifying.key.gz" "keys"
-download_and_gunzip "device_sig_rs2048.r1cs.gz"
-download_and_gunzip "device_sig_rs2048_proving.key.gz" "keys"
-download_and_gunzip "device_sig_rs2048_verifying.key.gz" "keys"
+download() {
+    local url="$1"
+    local folder="${2:-}"
+    local filename="${url##*/}"
+    local dest="$DEST_DIR/${folder:+$folder/}$filename"
+
+    if [ -f "$dest" ]; then
+        echo "Already exists: $dest"
+    else
+        mkdir -p "$(dirname "$dest")"
+        echo "Downloading $url -> $dest"
+        curl -fL "$url" -o "$dest"
+        echo "Saved to $dest"
+    fi
+}
+
+download_and_gunzip "$BASE_URL/cert_chain_rs4096.r1cs.gz"
+download_and_gunzip "$BASE_URL/cert_chain_rs4096_proving.key.gz" "keys"
+download_and_gunzip "$BASE_URL/cert_chain_rs4096_verifying.key.gz" "keys"
+download_and_gunzip "$BASE_URL/device_sig_rs2048.r1cs.gz"
+download_and_gunzip "$BASE_URL/device_sig_rs2048_proving.key.gz" "keys"
+download_and_gunzip "$BASE_URL/device_sig_rs2048_verifying.key.gz" "keys"
+download "$SMT_BASE_URL/g3-tree-snapshot.json.gz"
