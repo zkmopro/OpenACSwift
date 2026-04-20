@@ -11,24 +11,36 @@ private enum TestSupport {
     (testBundle.bundlePath as NSString).appendingPathComponent("TestVectors")
   }
 
-  static var bundledInputJSONPath: String? {
-    testBundle.path(forResource: "input", ofType: "json", inDirectory: "TestVectors")
+  static var bundledCertChainRs4096R1CSPath: String? {
+    testBundle.path(forResource: "cert_chain_rs4096", ofType: "r1cs", inDirectory: "TestVectors")
   }
 
-  static var bundledProvingKeyPath: String? {
-    testBundle.path(forResource: "rs256_4096_proving", ofType: "key", inDirectory: "TestVectors")
+  static var bundledDeviceSigRs2048R1CSPath: String? {
+    testBundle.path(forResource: "device_sig_rs2048", ofType: "r1cs", inDirectory: "TestVectors")
   }
 
-  static var bundledVerifyingKeyPath: String? {
-    testBundle.path(forResource: "rs256_4096_verifying", ofType: "key", inDirectory: "TestVectors")
+  static var bundledCertChainRs4096InputJSONPath: String? {
+    testBundle.path(forResource: "cert_chain_rs4096_input", ofType: "json", inDirectory: "TestVectors")
   }
 
-  static var bundledResponseJSONPath: String? {
-    testBundle.path(forResource: "response_sign", ofType: "json", inDirectory: "TestVectors")
+  static var bundledDeviceSigRs2048InputJSONPath: String? {
+    testBundle.path(forResource: "device_sig_rs2048_input", ofType: "json", inDirectory: "TestVectors")
   }
 
-  static var bundledFidoResponseJSONPath: String? {
-    testBundle.path(forResource: "fido_response_sign", ofType: "json", inDirectory: "TestVectors")
+  static var bundledCertChainRs4096ProvingKeyPath: String? {
+    testBundle.path(forResource: "cert_chain_rs4096_proving", ofType: "key", inDirectory: "TestVectors/keys")
+  }
+
+  static var bundledDeviceSigRs2048ProvingKeyPath: String? {
+    testBundle.path(forResource: "device_sig_rs2048_proving", ofType: "key", inDirectory: "TestVectors/keys")
+  }
+
+  static var bundledCertChainRs4096VerifyingKeyPath: String? {
+    testBundle.path(forResource: "cert_chain_rs4096_verifying", ofType: "key", inDirectory: "TestVectors/keys")
+  }
+
+  static var bundledDeviceSigRs2048VerifyingKeyPath: String? {
+    testBundle.path(forResource: "device_sig_rs2048_verifying", ofType: "key", inDirectory: "TestVectors/keys")
   }
 
   static var bundledMOICA_G3CertPath: String? {
@@ -42,57 +54,88 @@ private enum TestSupport {
 struct OpenACSwiftTests {
 
   @Test func setupKeysSucceedsWithBundleDocumentsPathAndBundledInput() async throws {
-    let inputPath = try #require(
-      TestSupport.bundledInputJSONPath,
-      "TestVectors/input.json must be copied into the test bundle (see Package.swift resources)."
+
+    _ = try #require(
+      TestSupport.bundledCertChainRs4096R1CSPath,
+      "TestVectors/cert_chain_rs4096.r1cs must be copied into the test bundle (see Package.swift resources)."
     )
 
-    let message = try setupKeysFido(
+    _ = try #require(
+      TestSupport.bundledDeviceSigRs2048R1CSPath,
+      "TestVectors/device_sig_rs2048.r1cs must be copied into the test bundle (see Package.swift resources)."
+    )
+
+    let message = try setupKeys(
       documentsPath: TestSupport.documentsPath,
-      inputPath: inputPath
     )
 
-    #expect(!message.isEmpty, "setupKeysFido should return a non-empty status string.")
+    #expect(!message.isEmpty, "setupKeys should return a non-empty status string.")
   }
 
-  @Test func setupKeysSucceedsWithMissingInputFile() async throws {
-    let missingInput = (NSTemporaryDirectory() as NSString)
-      .appendingPathComponent("openac-missing-input-\(UUID().uuidString).json")
-
-    let message = try setupKeysFido(
-      documentsPath: TestSupport.documentsPath,
-      inputPath: missingInput
+  @Test func proveCertChainRs4096ReturnsValidResultWithBundledInput() async throws {
+    _ = try #require(
+      TestSupport.bundledCertChainRs4096InputJSONPath,
+      "TestVectors/cert_chain_rs4096_input.json must be copied into the test bundle (see Package.swift resources)."
     )
 
-    #expect(
-      !message.isEmpty, "setupKeysFido should succeed even when inputPath points to a missing file.")
-  }
-
-  @Test func proveReturnsValidResultWithBundledInput() async throws {
-    let inputPath = try #require(
-      TestSupport.bundledInputJSONPath,
-      "TestVectors/input.json must be copied into the test bundle (see Package.swift resources)."
+    _ = try #require(
+      TestSupport.bundledCertChainRs4096ProvingKeyPath,
+      "TestVectors/cert_chain_rs4096_proving.key must be copied into the test bundle (see Package.swift resources)."
     )
 
-    _ = try setupKeysFido(documentsPath: TestSupport.documentsPath, inputPath: inputPath)
-
-    let result = try proveFido(documentsPath: TestSupport.documentsPath, inputPath: inputPath)
+    let result = try proveCertChainRs4096(documentsPath: TestSupport.documentsPath)
 
     #expect(result.proveMs > 0, "Proof generation should take measurable time.")
     #expect(result.proofSizeBytes > 0, "Proof should have a non-zero size.")
   }
 
-  @Test func proveAndVerifySucceed() async throws {
-    let inputPath = try #require(
-      TestSupport.bundledInputJSONPath,
-      "TestVectors/input.json must be copied into the test bundle (see Package.swift resources)."
+  @Test func proveDeviceSigRs2048ReturnsValidResultWithBundledInput() async throws {
+    _ = try #require(
+      TestSupport.bundledDeviceSigRs2048InputJSONPath,
+      "TestVectors/device_sig_rs2048_input.json must be copied into the test bundle (see Package.swift resources)."
     )
 
-    _ = try proveFido(documentsPath: TestSupport.documentsPath, inputPath: inputPath)
+    _ = try #require(
+      TestSupport.bundledDeviceSigRs2048ProvingKeyPath,
+      "TestVectors/device_sig_rs2048_proving.key must be copied into the test bundle (see Package.swift resources)."
+    )
 
-    let valid = try verifyFido(documentsPath: TestSupport.documentsPath)
+    _ = try #require(
+      TestSupport.bundledDeviceSigRs2048VerifyingKeyPath,
+      "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
+    )
 
-    #expect(valid, "Verification should succeed after a valid proveFido call.")
+    let result = try proveDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+
+    #expect(result.proveMs > 0, "Proof generation should take measurable time.")
+    #expect(result.proofSizeBytes > 0, "Proof should have a non-zero size.")
+  }
+
+  @Test func proveAndVerifyCertChainRs4096Succeeds() async throws {
+    _ = try #require(
+      TestSupport.bundledCertChainRs4096VerifyingKeyPath,
+      "TestVectors/cert_chain_rs4096_verifying.key must be copied into the test bundle (see Package.swift resources)."
+    )
+
+    _ = try proveCertChainRs4096(documentsPath: TestSupport.documentsPath)
+
+    let valid = try verifyCertChainRs4096(documentsPath: TestSupport.documentsPath)
+
+    #expect(valid, "Verification should succeed after a valid proveCertChainRs4096 call.")
+  }
+
+
+  @Test func proveAndVerifyDeviceSigRs2048Succeeds() async throws {
+    _ = try #require(
+      TestSupport.bundledDeviceSigRs2048VerifyingKeyPath,
+      "TestVectors/device_sig_rs2048_verifying.key must be copied into the test bundle (see Package.swift resources)."
+    )
+
+    _ = try proveDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+
+    let valid = try verifyDeviceSigRs2048(documentsPath: TestSupport.documentsPath)
+
+    #expect(valid, "Verification should succeed after a valid proveDeviceSigRs2048 call.")
   }
 
   // @Test func generateInputSucceeds() async throws {

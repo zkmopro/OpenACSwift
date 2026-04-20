@@ -7,22 +7,31 @@ BASE_URL="https://github.com/zkmopro/zkID/releases/download/latest"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-download_and_unzip() {
-    local name="$1"   # filename inside zip (without .zip)
-    local dest="$DEST_DIR/$name"
+download_and_gunzip() {
+    local name="$1"   # filename with .gz extension
+    local folder="${2:-}" # subfolder under DEST_DIR, or empty
+    local decompressed="${name%.gz}"
+    local dest_dir="$DEST_DIR"
+    if [ -n "$folder" ]; then
+        dest_dir="$DEST_DIR/$folder"
+    fi
+    local dest="$dest_dir/$decompressed"
 
     if [ -f "$dest" ]; then
         echo "Already exists: $dest"
         return
     fi
 
-    echo "Downloading ${name}.zip..."
-    curl -fL "$BASE_URL/${name}.zip" -o "$TMP/${name}.zip"
-    unzip -q "$TMP/${name}.zip" -d "$TMP"
-    mv "$TMP/$name" "$dest"
+    mkdir -p "$dest_dir"
+    echo "Downloading $name..."
+    curl -fL "$BASE_URL/$name" -o "$TMP/$name"
+    gunzip -c "$TMP/$name" > "$dest"
     echo "Saved to $dest"
 }
 
-download_and_unzip "sha256rsa4096.r1cs"
-download_and_unzip "rs256_4096_proving.key"
-download_and_unzip "rs256_4096_verifying.key"
+download_and_gunzip "cert_chain_rs4096.r1cs.gz"
+download_and_gunzip "cert_chain_rs4096_proving.key.gz" "keys"
+download_and_gunzip "cert_chain_rs4096_verifying.key.gz" "keys"
+download_and_gunzip "device_sig_rs2048.r1cs.gz"
+download_and_gunzip "device_sig_rs2048_proving.key.gz" "keys"
+download_and_gunzip "device_sig_rs2048_verifying.key.gz" "keys"

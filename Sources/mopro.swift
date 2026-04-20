@@ -593,7 +593,8 @@ public func FfiConverterTypeBenchmarkResults_lower(_ value: BenchmarkResults) ->
 
 
 /**
- * Result of a proving operation with timing and proof metadata
+ * Result of a proving operation with timing and proof metadata.
+ * `prove_ms` is the total time for both circuits; `proof_size_bytes` is the combined size.
  */
 public struct ProofResult {
     public var proveMs: UInt64
@@ -814,18 +815,34 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 /**
- * Generate circuit input from a FIDO FidoSignResponse (sha256rsa4096)
+ * Generate split circuit inputs for both cert_chain_rs4096 and device_sig_rs2048.
+ *
+ * Writes two JSON files into `output_dir`:
+ * - `cert_chain_rs4096_input.json`
+ * - `device_sig_rs2048_input.json`
+ *
+ * These are the input files expected by `prove` via `PathConfig::mobile`.
  */
-public func generateInputFido(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtServer: String?, issuerId: String, outputPath: String)throws  -> String  {
+public func generateCertChainRs4096Input(certb64: String, signedResponse: String, tbs: String, issuerCertPath: String, smtServer: String?, issuerId: String, outputDir: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_generate_input_fido(
+    uniffi_openac_mobile_app_fn_func_generate_cert_chain_rs4096_input(
         FfiConverterString.lower(certb64),
         FfiConverterString.lower(signedResponse),
         FfiConverterString.lower(tbs),
         FfiConverterString.lower(issuerCertPath),
         FfiConverterOptionString.lower(smtServer),
         FfiConverterString.lower(issuerId),
-        FfiConverterString.lower(outputPath),$0
+        FfiConverterString.lower(outputDir),$0
+    )
+})
+}
+/**
+ * Verify proofs for cert_chain_rs4096 and device_sig_rs2048 circuits.
+ */
+public func linkVerify(documentsPath: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_link_verify(
+        FfiConverterString.lower(documentsPath),$0
     )
 })
 }
@@ -839,44 +856,87 @@ public func moproHelloWorld() -> String  {
 })
 }
 /**
- * Generate sha256rsa4096 circuit proof (FIDO)
+ * Generate proofs for cert_chain_rs4096 circuit.
+ *
+ * Reads input JSONs via `PathConfig::mobile(documents_path)`:
+ * - `{documents_path}/cert_chain_rs4096_input.json`
+ *
+ * Writes proofs, instances, and witnesses under `{documents_path}/keys/`.
+ *
+ * Witnesses are pre-warmed before any Spartan2 key I/O so that witnesscalc's
+ * C++ realloc runs on a clean heap and avoids macOS SIGSEGV from moved pointers.
  */
-public func proveFido(documentsPath: String, inputPath: String?)throws  -> ProofResult  {
+public func proveCertChainRs4096(documentsPath: String)throws  -> ProofResult  {
     return try  FfiConverterTypeProofResult_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_prove_fido(
-        FfiConverterString.lower(documentsPath),
-        FfiConverterOptionString.lower(inputPath),$0
+    uniffi_openac_mobile_app_fn_func_prove_cert_chain_rs4096(
+        FfiConverterString.lower(documentsPath),$0
     )
 })
 }
 /**
- * Run complete benchmark pipeline for sha256rsa4096 circuit (FIDO)
+ * Generate proofs for both cert_chain_rs4096 and device_sig_rs2048 circuits.
+ *
+ * Reads input JSONs via `PathConfig::mobile(documents_path)`:
+ * - `{documents_path}/cert_chain_rs4096_input.json`
+ * - `{documents_path}/device_sig_rs2048_input.json`
+ *
+ * Writes proofs, instances, and witnesses under `{documents_path}/keys/`.
+ *
+ * Witnesses are pre-warmed before any Spartan2 key I/O so that witnesscalc's
+ * C++ realloc runs on a clean heap and avoids macOS SIGSEGV from moved pointers.
  */
-public func runCompleteBenchmarkFido(documentsPath: String, inputPath: String?)throws  -> BenchmarkResults  {
+public func proveDeviceSigRs2048(documentsPath: String)throws  -> ProofResult  {
+    return try  FfiConverterTypeProofResult_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_prove_device_sig_rs2048(
+        FfiConverterString.lower(documentsPath),$0
+    )
+})
+}
+/**
+ * Run complete benchmark pipeline for both cert_chain_rs4096 and device_sig_rs2048 circuits.
+ *
+ * Witnesses are pre-warmed on a clean heap before Spartan2 setup to prevent macOS SIGSEGV:
+ * witnesscalc's C++ `realloc()` moves large allocations on a fragmented heap, leaving stale
+ * interior pointers. Pre-warming ensures the realloc happens before heap fragmentation.
+ * Each circuit is then processed in isolation (setup → save → drop PK → prove → verify) to
+ * avoid holding two large proving keys in memory simultaneously. Timings and sizes are combined.
+ */
+public func runCompleteBenchmark(documentsPath: String)throws  -> BenchmarkResults  {
     return try  FfiConverterTypeBenchmarkResults_lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_run_complete_benchmark_fido(
-        FfiConverterString.lower(documentsPath),
-        FfiConverterOptionString.lower(inputPath),$0
+    uniffi_openac_mobile_app_fn_func_run_complete_benchmark(
+        FfiConverterString.lower(documentsPath),$0
     )
 })
 }
 /**
- * Setup sha256rsa4096 circuit keys (FIDO)
+ * Setup circuit keys for both cert_chain_rs4096 and device_sig_rs2048.
+ *
+ * Requires that `{documents_path}/cert_chain_rs4096.r1cs` and
+ * `{documents_path}/device_sig_rs2048.r1cs` are present.
  */
-public func setupKeysFido(documentsPath: String, inputPath: String?)throws  -> String  {
+public func setupKeys(documentsPath: String)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_setup_keys_fido(
-        FfiConverterString.lower(documentsPath),
-        FfiConverterOptionString.lower(inputPath),$0
+    uniffi_openac_mobile_app_fn_func_setup_keys(
+        FfiConverterString.lower(documentsPath),$0
     )
 })
 }
 /**
- * Verify sha256rsa4096 circuit proof (FIDO)
+ * Verify proofs for cert_chain_rs4096 circuit.
  */
-public func verifyFido(documentsPath: String)throws  -> Bool  {
+public func verifyCertChainRs4096(documentsPath: String)throws  -> Bool  {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
-    uniffi_openac_mobile_app_fn_func_verify_fido(
+    uniffi_openac_mobile_app_fn_func_verify_cert_chain_rs4096(
+        FfiConverterString.lower(documentsPath),$0
+    )
+})
+}
+/**
+ * Verify proofs for device_sig_rs2048 circuit.
+ */
+public func verifyDeviceSigRs2048(documentsPath: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeZkProofError_lift) {
+    uniffi_openac_mobile_app_fn_func_verify_device_sig_rs2048(
         FfiConverterString.lower(documentsPath),$0
     )
 })
@@ -897,22 +957,31 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_generate_input_fido() != 45191) {
+    if (uniffi_openac_mobile_app_checksum_func_generate_cert_chain_rs4096_input() != 45535) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_link_verify() != 4694) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_openac_mobile_app_checksum_func_mopro_hello_world() != 46672) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_prove_fido() != 51185) {
+    if (uniffi_openac_mobile_app_checksum_func_prove_cert_chain_rs4096() != 42180) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark_fido() != 7072) {
+    if (uniffi_openac_mobile_app_checksum_func_prove_device_sig_rs2048() != 31190) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_setup_keys_fido() != 41495) {
+    if (uniffi_openac_mobile_app_checksum_func_run_complete_benchmark() != 7344) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_openac_mobile_app_checksum_func_verify_fido() != 39808) {
+    if (uniffi_openac_mobile_app_checksum_func_setup_keys() != 1011) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_verify_cert_chain_rs4096() != 13705) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_openac_mobile_app_checksum_func_verify_device_sig_rs2048() != 39939) {
         return InitializationResult.apiChecksumMismatch
     }
 
