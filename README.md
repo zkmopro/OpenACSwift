@@ -52,7 +52,16 @@ do {
 }
 ```
 
-Before calling `setupKeys`, download the four key files and place them in `documentsPath/keys/`:
+Before calling `setupKeys`, download the required files and place them in `documentsPath`:
+
+**R1CS files** (directly in `documentsPath/`):
+
+| File | Download URL |
+|------|-------------|
+| `cert_chain_rs4096.r1cs` | [cert_chain_rs4096.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/cert_chain_rs4096.r1cs.gz) |
+| `device_sig_rs2048.r1cs` | [device_sig_rs2048.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/device_sig_rs2048.r1cs.gz) |
+
+**Key files** (in `documentsPath/keys/`):
 
 | File | Download URL |
 |------|-------------|
@@ -61,10 +70,10 @@ Before calling `setupKeys`, download the four key files and place them in `docum
 | `device_sig_rs2048_proving.key` | [device_sig_rs2048_proving.key.gz](https://github.com/zkmopro/zkID/releases/download/latest/device_sig_rs2048_proving.key.gz) |
 | `device_sig_rs2048_verifying.key` | [device_sig_rs2048_verifying.key.gz](https://github.com/zkmopro/zkID/releases/download/latest/device_sig_rs2048_verifying.key.gz) |
 
-Each file is gzip-compressed — decompress before use (e.g. `gunzip *.gz`). The decompressed key files must be present at `documentsPath/keys/<filename>` before calling `setupKeys`.
+The `.gz` key files must be decompressed before use (e.g. `gunzip *.gz`). The `.r1cs` files are also gzip-compressed — decompress them too.
 
 **Parameters:**
-- `documentsPath` — directory containing the `keys/` subdirectory with the key files
+- `documentsPath` — directory containing the `.r1cs` files and the `keys/` subdirectory
 
 **Returns:** a status string confirming completion.
 
@@ -109,7 +118,7 @@ let linked = try linkVerify(documentsPath: documentsPath)
 
 ### Generate Circuit Input
 
-Use `generateCertChainRs4096Input` to produce a JSON input file for the cert chain circuit from raw credential data.
+Use `generateCertChainRs4096Input` to produce JSON input files for both circuits from raw credential data.
 
 ```swift
 let outputPath = try generateCertChainRs4096Input(
@@ -117,12 +126,57 @@ let outputPath = try generateCertChainRs4096Input(
     signedResponse: "<signed-response-json>",
     tbs: "<tbs-data>",
     issuerCertPath: "/path/to/issuer.cer",
-    smtServer: nil,          // optional SMT server URL
-    issuerId: "<issuer-id>",
+    smtSnapshotPath: "/path/to/g3-tree-snapshot.json.gz", // optional; pass nil to skip SMT revocation
     outputDir: documentsPath
 )
 print("Input written to:", outputPath)
 ```
+
+This writes two files into `outputDir`:
+- `cert_chain_rs4096_input.json`
+- `device_sig_rs2048_input.json`
+
+**Parameters:**
+- `smtSnapshotPath` — path to the compressed SMT snapshot (`.json.gz`); pass `nil` to skip revocation checking
+
+The SMT snapshot can be downloaded from the [moica-revocation-smt snapshot release](https://github.com/moven0831/moica-revocation-smt/releases/tag/snapshot-latest) (`g3-tree-snapshot.json.gz`). Keep it compressed — the library reads it directly in gzip format.
+
+---
+
+### SMT Revocation
+
+OpenACSwift includes offline SMT (Sparse Merkle Tree) revocation checking using a local snapshot, without requiring a network call to the revocation server.
+
+#### Using the snapshot directly in `generateCertChainRs4096Input`
+
+The simplest path is to pass `smtSnapshotPath` to `generateCertChainRs4096Input` (see above). The library handles loading and proof generation internally.
+
+#### Manual SMT operations
+
+For more control, use the lower-level SMT functions:
+
+```swift
+// Load the snapshot and generate a non-membership proof for a certificate serial number
+let gzData = try Data(contentsOf: URL(fileURLWithPath: "/path/to/g3-tree-snapshot.json.gz"))
+let smtProof: SmtProof = try createSmtProofFromGz(gzData: gzData, keyHex: "0x<serial-number-hex>")
+
+// Verify the proof against the snapshot root
+let root = buildSmtFromSnapshot(snapshotJson: decompressedJsonString)
+let valid = verifySmtProof(proof: smtProof, expectedRoot: root)
+
+// Convert to Circom circuit inputs (decimal strings, siblings padded to depth)
+let circuitInputs: SmtCircuitInputs = try smtProofToCircuitInputs(proof: smtProof, depth: 160)
+```
+
+**`SmtProof`** fields:
+- `root: String` — tree root at proof time (hex)
+- `siblings: [String]` — sibling hashes from leaf level upward (hex)
+- `entry: [String]` — `[key]` for non-membership; `[key, value, marker]` for membership
+- `matchingEntry: [String]?` — present for non-membership proofs when a conflicting leaf exists
+- `membership: Bool` — true if the key exists in the tree
+
+**`SmtCircuitInputs`** fields (all decimal strings, for Circom):
+- `smtRoot`, `serialNumber`, `smtSiblings`, `smtOldKey`, `smtOldValue`, `smtIsOld0`
 
 ---
 
@@ -156,14 +210,25 @@ func runZKProof() async {
         let status = try setupKeys(documentsPath: documentsPath)
         print("Keys ready:", status)
 
-        // 2. Generate proofs
+        // 2. Generate circuit inputs (with optional SMT revocation)
+        let snapshotPath = documentsPath + "/g3-tree-snapshot.json.gz"
+        _ = try generateCertChainRs4096Input(
+            certb64: "<base64-cert>",
+            signedResponse: "<signed-response-json>",
+            tbs: "<tbs>",
+            issuerCertPath: documentsPath + "/MOICA-G3.cer",
+            smtSnapshotPath: snapshotPath,
+            outputDir: documentsPath
+        )
+
+        // 3. Generate proofs
         let certProof = try proveCertChainRs4096(documentsPath: documentsPath)
         print("cert_chain proved in \(certProof.proveMs) ms (\(certProof.proofSizeBytes) bytes)")
 
         let devProof = try proveDeviceSigRs2048(documentsPath: documentsPath)
         print("device_sig proved in \(devProof.proveMs) ms (\(devProof.proofSizeBytes) bytes)")
 
-        // 3. Verify proofs
+        // 4. Verify proofs
         let certValid = try verifyCertChainRs4096(documentsPath: documentsPath)
         let devValid  = try verifyDeviceSigRs2048(documentsPath: documentsPath)
         let linked    = try linkVerify(documentsPath: documentsPath)
@@ -195,12 +260,17 @@ func runZKProof() async {
 | `verifyCertChainRs4096(documentsPath:)` | `Bool` | Verify cert chain proof |
 | `verifyDeviceSigRs2048(documentsPath:)` | `Bool` | Verify device signature proof |
 | `linkVerify(documentsPath:)` | `Bool` | Verify both proofs together |
-| `generateCertChainRs4096Input(...)` | `String` | Generate circuit input JSON from credential data |
+| `generateCertChainRs4096Input(certb64:signedResponse:tbs:issuerCertPath:smtSnapshotPath:outputDir:)` | `String` | Generate circuit input JSONs from credential data |
 | `runCompleteBenchmark(documentsPath:)` | `BenchmarkResults` | Run full pipeline and return timing/size stats |
+| `buildSmtFromSnapshot(snapshotJson:)` | `String` | Parse snapshot JSON and return the SMT root |
+| `createSmtProof(snapshotJson:keyHex:)` | `SmtProof` | Generate an SMT proof from a decompressed snapshot |
+| `createSmtProofFromGz(gzData:keyHex:)` | `SmtProof` | Generate an SMT proof from a compressed `.json.gz` snapshot |
+| `smtProofToCircuitInputs(proof:depth:)` | `SmtCircuitInputs` | Convert `SmtProof` to Circom-ready decimal inputs |
+| `verifySmtProof(proof:expectedRoot:)` | `Bool` | Verify an SMT proof against a trusted root |
 
 ## Error Handling
 
-All functions throw `ZkProofError`:
+All throwing functions throw `ZkProofError`:
 
 | Case | Description |
 |------|-------------|
