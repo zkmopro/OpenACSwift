@@ -20,7 +20,11 @@ ZIP_PATH="$WORK_DIR/MoproBindings.xcframework.zip"
 
 # ── Resolve the latest release tag via the GitHub API ────────────────────────
 echo "==> Fetching latest release tag for $REPO"
-LATEST_TAG=$(curl -fsSL --retry 3 \
+CURL_AUTH=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    CURL_AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN")
+fi
+LATEST_TAG=$(curl -fsSL --retry 3 "${CURL_AUTH[@]}" \
     "https://api.github.com/repos/$REPO/releases/latest" \
     | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
 echo "    tag: $LATEST_TAG"
