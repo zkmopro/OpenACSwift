@@ -188,7 +188,6 @@ struct OpenACSwiftTests {
   //     "TestVectors/g3-tree-snapshot.json must be copied into the test bundle (see Package.swift resources)."
   //   )
 
-  //   let pkBlind = "452312848583266388373324160190187140051835877600158453279131187530910662655"
   //   let challenge = "1339673755198158349044581307228491536"
   //   let _ = try generateCertChainRs4096Input(
   //     certb64: certb64,
@@ -197,7 +196,6 @@ struct OpenACSwiftTests {
   //     issuerCertPath: issuerCertPath,
   //     smtSnapshotPath: smtSnapshotPath,
   //     outputDir: TestSupport.documentsPath,
-  //     pkBlind: pkBlind,
   //     challenge: challenge,
   //   )
 
