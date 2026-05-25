@@ -58,8 +58,8 @@ Before calling `setupKeys`, download the required files and place them in `docum
 
 | File | Download URL |
 |------|-------------|
-| `cert_chain_rs4096.r1cs` | [cert_chain_rs4096.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/cert_chain_rs4096.r1cs.gz) |
-| `user_sig_rs2048.r1cs` | [user_sig_rs2048.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/user_sig_rs2048.r1cs.gz) |
+| `cert_chain_rs4096.r1cs` | [certChainRS4096.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/certChainRS4096.r1cs.gz) |
+| `user_sig_rs2048.r1cs` | [userSigRS2048.r1cs.gz](https://github.com/zkmopro/zkID/releases/download/latest/userSigRS2048.r1cs.gz) |
 
 **Key files** (in `documentsPath/keys/`):
 
