@@ -9,11 +9,12 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 download_and_gunzip() {
-    local url="$1"   # URL to download
+    local url="$1"        # URL to download
     local folder="${2:-}" # subfolder under DEST_DIR, or empty
-    local decompressed="${url##*/}"
-    decompressed="${decompressed%.gz}"
-    local dest="$DEST_DIR/${folder:+$folder/}$decompressed"
+    local out_name="${3:-}" # optional: override output filename after decompression
+    local filename="${url##*/}"
+    local decompressed="${filename%.gz}"
+    local dest="$DEST_DIR/${folder:+$folder/}${out_name:-$decompressed}"
 
     if [ -f "$dest" ]; then
         echo "Already exists: $dest"
@@ -21,8 +22,8 @@ download_and_gunzip() {
     else
         mkdir -p "$(dirname "$dest")"
         echo "Downloading $url -> $dest"
-        curl -fL "$url" -o "$TMP/$decompressed"
-        gunzip -c "$TMP/$decompressed" > "$dest"
+        curl -fL "$url" -o "$TMP/$filename"
+        gunzip -c "$TMP/$filename" > "$dest"
         echo "Saved to $dest"
     fi
 }
@@ -43,10 +44,10 @@ download() {
     fi
 }
 
-download_and_gunzip "$BASE_URL/cert_chain_rs4096.r1cs.gz"
+download_and_gunzip "$BASE_URL/certChainRS4096.r1cs.gz" "" "cert_chain_rs4096.r1cs"
 download_and_gunzip "$BASE_URL/cert_chain_rs4096_proving.key.gz" "keys"
 download_and_gunzip "$BASE_URL/cert_chain_rs4096_verifying.key.gz" "keys"
-download_and_gunzip "$BASE_URL/device_sig_rs2048.r1cs.gz"
-download_and_gunzip "$BASE_URL/device_sig_rs2048_proving.key.gz" "keys"
-download_and_gunzip "$BASE_URL/device_sig_rs2048_verifying.key.gz" "keys"
+download_and_gunzip "$BASE_URL/user_sig_rs2048.r1cs.gz"
+download_and_gunzip "$BASE_URL/user_sig_rs2048_proving.key.gz" "keys"
+download_and_gunzip "$BASE_URL/user_sig_rs2048_verifying.key.gz" "keys"
 download "$SMT_BASE_URL/g3-tree-snapshot.json.gz"
